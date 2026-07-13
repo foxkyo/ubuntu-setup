@@ -86,8 +86,11 @@ echo "== 安裝中文字型 =="
 apt install -y \
     fonts-noto-cjk \
     fonts-noto-cjk-extra \
-    fonts-noto-color-emoji
+    fonts-noto-color-emoji \
+    fonts-arphic-ukai \
+    fonts-arphic-uming
 
+fc-cache -fv
 
 
 echo
