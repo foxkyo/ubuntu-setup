@@ -14,6 +14,8 @@ curl -fsSL https://tailscale.com/install.sh | sh
 
 sudo systemctl enable tailscaled
 sudo systemctl start tailscaled
+tailscale status
+tailscale ip
 
 echo
 echo "======================================"
