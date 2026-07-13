@@ -27,6 +27,7 @@ echo
 echo "== 安裝 Ubuntu Desktop Minimal =="
 
 apt install -y \
+    ubuntu-app-center \
     ubuntu-desktop-minimal \
     ubuntu-session \
     gdm3
