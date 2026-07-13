@@ -4,7 +4,7 @@ set -e
 
 echo "========================================"
 echo " Ubuntu Server → Ubuntu Desktop Minimal"
-echo " Ubuntu 26.04 (一次到位・免重裝 Firefox 版)"
+echo " Ubuntu 26.04 (原生預設・完美中文版)"
 echo "========================================"
 
 # 檢查權限
@@ -17,7 +17,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 echo
 echo "== 1. 優先設定系統語系與時區 =="
-# 在做任何事情之前，先確保系統底層環境變數是 zh_TW
+# 這是最重要的基石！先讓系統知道我們要用繁體中文
 locale-gen zh_TW.UTF-8
 update-locale LANG=zh_TW.UTF-8 LANGUAGE=zh_TW:zh
 timedatectl set-timezone Asia/Taipei
@@ -28,8 +28,8 @@ apt update
 apt -y upgrade
 
 echo
-echo "== 3. 優先安裝正體中文語言包與中文字型 =="
-# 【核心修正】在安裝桌面與瀏覽器之前，必須先讓系統具備完整的中文語系與字型
+echo "== 3. 預先安裝正體中文語言包與中文字型 =="
+# 在桌面和瀏覽器被裝進來之前，先把字型準備好
 apt install -y \
     language-pack-zh-hant \
     language-pack-gnome-zh-hant \
@@ -42,13 +42,13 @@ apt install -y \
     fonts-arphic-uming
 
 echo
-echo "== 4. 建立與更新系統字型快取 =="
-# 強制讓系統生成正確的字型快取，以便後續安裝的 Snap 軟體可以直接讀取
+echo "== 4. 刷新系統字型快取 =="
 fc-cache -fv
 
 echo
-echo "== 5. 安裝 Ubuntu Desktop Minimal 與預設元件 =="
-# 此時環境已完美支援中文，系統預設帶入的 Firefox 將會直接以正常的繁體中文顯示
+echo "== 5. 安裝桌面環境（此時系統會自動帶入預設的 Firefox） =="
+# 我們只管安裝桌面，Firefox 會作為預設元件被自動拉進來
+# 因為前面字型跟語系都對了，自動進來的 Firefox 就不會再變豆腐字
 apt install -y \
     ubuntu-desktop-minimal \
     ubuntu-session \
@@ -63,9 +63,6 @@ if ! snap list snap-store >/dev/null 2>&1; then
     echo "== 安裝 Ubuntu App Center =="
     snap install snap-store
 fi
-
-# 確保 Firefox 的中文本地化支援套件一併安裝
-apt install -y firefox-locale-zh-hant || true
 
 echo
 echo "== 6. 補齊其餘中文套件 =="
@@ -108,6 +105,6 @@ echo "請直接重新開機："
 echo "sudo reboot"
 echo
 echo "說明："
-echo "由於字型與語系在安裝桌面之前就已完全就緒，"
-echo "重開機登入後直接打開預設的 Firefox 即可正常顯示中文，無需任何額外操作！"
+echo "腳本完全沒有手動去干預或安裝 Firefox，"
+echo "完全交由 Ubuntu 預設安裝。重開機後直接打開，中文就會完美顯示！"
 echo "========================================"
