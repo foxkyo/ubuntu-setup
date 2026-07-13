@@ -38,9 +38,20 @@ echo
 echo "== 安裝軟體管理中心 =="
 
 apt install -y \
+    snapd \
     gnome-software \
     gnome-software-plugin-snap
 
+
+systemctl enable --now snapd
+
+
+if ! snap list snap-store >/dev/null 2>&1; then
+    echo "== 安裝 Ubuntu App Center =="
+
+    snap install snap-store
+
+fi
 
 
 echo
