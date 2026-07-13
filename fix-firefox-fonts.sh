@@ -1,11 +1,16 @@
-# 1. 建立 Snap 專用的字型目錄（如果不存在）
-mkdir -p ~/snap/firefox/common/.cache/fontconfig
+# 1. 徹底移除頑固的 Snap 版 Firefox
+sudo snap remove --purge firefox
 
-# 2. 複製系統現有的正確字型快取到 Firefox 的家目錄沙盒中
-cp -r /var/cache/fontconfig/* ~/snap/firefox/common/.cache/fontconfig/ 2>/dev/null || true
+# 2. 加入 Mozilla Team 的官方 PPA 來源
+sudo add-apt-repository ppa:mozillateam/ppa -y
 
-# 3. 調整權限，確保 Firefox 讀得到
-chmod -R 755 ~/snap/firefox/common/.cache/fontconfig
+# 3. 設定 APT 優先級，強迫系統以後都下載 PPA 原生版，而不是 Ubuntu 預設的 Snap 版
+echo '
+Package: firefox*
+Pin: release o=LP-PPA-mozillateam
+Pin-Priority: 1001
+' | sudo tee /etc/apt/preferences.d/mozillateam-ppa
 
-# 4. 強制關閉可能在背景卡死的 Firefox
-killall -9 firefox 2>/dev/null || true
+# 4. 更新來源並安裝全新的原生 Firefox 與繁體中文包
+sudo apt update
+sudo apt install -y firefox firefox-locale-zh-hant
