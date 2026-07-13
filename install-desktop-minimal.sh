@@ -48,6 +48,7 @@ apt install -y \
 systemctl enable --now snapd
 
 
+
 if ! snap list snap-store >/dev/null 2>&1; then
 
     echo "== 安裝 Ubuntu App Center =="
@@ -64,7 +65,6 @@ echo "== 安裝繁體中文語言 =="
 apt install -y \
     language-pack-zh-hant \
     language-pack-gnome-zh-hant \
-    language-pack-kde-zh-hant \
     language-selector-common \
     language-selector-gnome
 
@@ -89,7 +89,7 @@ echo
 echo "== 安裝 Firefox 中文 =="
 
 apt install -y \
-    firefox-locale-zh-hant
+    firefox-locale-zh-hant || true
 
 
 
@@ -101,9 +101,7 @@ apt install -y \
     fonts-noto-cjk-extra \
     fonts-noto-color-emoji \
     fonts-arphic-ukai \
-    fonts-arphic-uming \
-    fonts-kacst \
-    fonts-khmeros-core
+    fonts-arphic-uming
 
 
 fc-cache -fv
@@ -118,25 +116,29 @@ apt install -y \
     fcitx5-config-qt \
     fcitx5-frontend-gtk3 \
     fcitx5-frontend-gtk4 \
-    fcitx5-module-quickphrase-editor
+    fcitx5-chinese-addons \
+    fcitx-module-quickphrase-editor5
 
 
 
 echo
 echo "== 設定 Fcitx5 =="
 
-cat >/etc/environment <<EOF
-LANG=zh_TW.UTF-8
-LANGUAGE=zh_TW:zh
-GTK_IM_MODULE=fcitx
-QT_IM_MODULE=fcitx
-XMODIFIERS=@im=fcitx
+
+cat >/etc/profile.d/fcitx5.sh <<EOF
+export GTK_IM_MODULE=fcitx
+export QT_IM_MODULE=fcitx
+export XMODIFIERS=@im=fcitx
 EOF
+
+
+chmod 644 /etc/profile.d/fcitx5.sh
 
 
 
 echo
 echo "== 設定語系 =="
+
 
 locale-gen zh_TW.UTF-8
 
@@ -164,6 +166,7 @@ systemctl enable gdm3
 echo
 echo "== 關閉 Wayland（RustDesk 遠端控制） =="
 
+
 GDM_CONFIG="/etc/gdm3/custom.conf"
 
 
@@ -171,10 +174,19 @@ if [ -f "$GDM_CONFIG" ]; then
 
     sed -i '/^WaylandEnable=/d' "$GDM_CONFIG"
 
+
     if grep -q "^\[daemon\]" "$GDM_CONFIG"; then
+
         sed -i '/^\[daemon\]/a WaylandEnable=false' "$GDM_CONFIG"
+
     else
-        echo -e "\n[daemon]\nWaylandEnable=false" >> "$GDM_CONFIG"
+
+        cat >> "$GDM_CONFIG" <<EOF
+
+[daemon]
+WaylandEnable=false
+EOF
+
     fi
 
 fi
@@ -198,9 +210,10 @@ echo "sudo reboot"
 echo
 echo "登入後:"
 echo
-echo "1. 確認 Firefox 中文"
-echo "2. 開啟 Fcitx5"
-echo "3. 執行嘸蝦米安裝腳本"
+echo "1. 確認系統語言：繁體中文"
+echo "2. 開啟 Fcitx5 設定"
+echo "3. 加入中文輸入法"
+echo "4. 執行嘸蝦米安裝腳本"
 echo
 echo "./install-boshiamy.sh"
 echo
