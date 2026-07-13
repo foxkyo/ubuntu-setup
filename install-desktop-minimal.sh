@@ -4,6 +4,7 @@ set -e
 
 echo "========================================"
 echo " Ubuntu Server → Ubuntu Desktop Minimal"
+echo " Ubuntu 26.04"
 echo "========================================"
 
 
@@ -13,21 +14,22 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 
+export DEBIAN_FRONTEND=noninteractive
+
+
 echo
 echo "== 更新系統 =="
-
-export DEBIAN_FRONTEND=noninteractive
 
 apt update
 
 apt -y upgrade
 
 
+
 echo
 echo "== 安裝 Ubuntu Desktop Minimal =="
 
 apt install -y \
-    ubuntu-app-center \
     ubuntu-desktop-minimal \
     ubuntu-session \
     gdm3
@@ -47,11 +49,13 @@ systemctl enable --now snapd
 
 
 if ! snap list snap-store >/dev/null 2>&1; then
+
     echo "== 安裝 Ubuntu App Center =="
 
     snap install snap-store
 
 fi
+
 
 
 echo
@@ -60,6 +64,7 @@ echo "== 安裝繁體中文語言 =="
 apt install -y \
     language-pack-zh-hant \
     language-pack-gnome-zh-hant \
+    language-pack-kde-zh-hant \
     language-selector-common \
     language-selector-gnome
 
@@ -81,6 +86,14 @@ fi
 
 
 echo
+echo "== 安裝 Firefox 中文 =="
+
+apt install -y \
+    firefox-locale-zh-hant
+
+
+
+echo
 echo "== 安裝中文字型 =="
 
 apt install -y \
@@ -88,9 +101,13 @@ apt install -y \
     fonts-noto-cjk-extra \
     fonts-noto-color-emoji \
     fonts-arphic-ukai \
-    fonts-arphic-uming
+    fonts-arphic-uming \
+    fonts-kacst \
+    fonts-khmeros-core
+
 
 fc-cache -fv
+
 
 
 echo
@@ -100,14 +117,21 @@ apt install -y \
     fcitx5 \
     fcitx5-config-qt \
     fcitx5-frontend-gtk3 \
-    fcitx5-frontend-gtk4
+    fcitx5-frontend-gtk4 \
+    fcitx5-module-quickphrase-editor
 
 
 
 echo
 echo "== 設定 Fcitx5 =="
 
-im-config -n fcitx5 || true
+cat >/etc/environment <<EOF
+LANG=zh_TW.UTF-8
+LANGUAGE=zh_TW:zh
+GTK_IM_MODULE=fcitx
+QT_IM_MODULE=fcitx
+XMODIFIERS=@im=fcitx
+EOF
 
 
 
@@ -115,6 +139,7 @@ echo
 echo "== 設定語系 =="
 
 locale-gen zh_TW.UTF-8
+
 
 update-locale \
     LANG=zh_TW.UTF-8 \
@@ -137,8 +162,7 @@ systemctl enable gdm3
 
 
 echo
-echo "== 關閉 Wayland（方便 RustDesk / 遠端控制） =="
-
+echo "== 關閉 Wayland（RustDesk 遠端控制） =="
 
 GDM_CONFIG="/etc/gdm3/custom.conf"
 
@@ -147,7 +171,11 @@ if [ -f "$GDM_CONFIG" ]; then
 
     sed -i '/^WaylandEnable=/d' "$GDM_CONFIG"
 
-    sed -i '/^\[daemon\]/a WaylandEnable=false' "$GDM_CONFIG"
+    if grep -q "^\[daemon\]" "$GDM_CONFIG"; then
+        sed -i '/^\[daemon\]/a WaylandEnable=false' "$GDM_CONFIG"
+    else
+        echo -e "\n[daemon]\nWaylandEnable=false" >> "$GDM_CONFIG"
+    fi
 
 fi
 
@@ -164,14 +192,16 @@ echo
 echo "========================================"
 echo " Ubuntu Desktop Minimal 安裝完成"
 echo
-echo "下一步："
+echo "請重新開機:"
 echo
-echo "1. 重新開機"
-echo "   sudo reboot"
+echo "sudo reboot"
 echo
-echo "2. 登入桌面後確認中文"
+echo "登入後:"
 echo
+echo "1. 確認 Firefox 中文"
+echo "2. 開啟 Fcitx5"
 echo "3. 執行嘸蝦米安裝腳本"
-echo "   ./install-boshiamy.sh"
+echo
+echo "./install-boshiamy.sh"
 echo
 echo "========================================"
