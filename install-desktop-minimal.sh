@@ -163,33 +163,6 @@ systemctl enable gdm3
 
 
 
-echo
-echo "== 關閉 Wayland（RustDesk 遠端控制） =="
-
-
-GDM_CONFIG="/etc/gdm3/custom.conf"
-
-
-if [ -f "$GDM_CONFIG" ]; then
-
-    sed -i '/^WaylandEnable=/d' "$GDM_CONFIG"
-
-
-    if grep -q "^\[daemon\]" "$GDM_CONFIG"; then
-
-        sed -i '/^\[daemon\]/a WaylandEnable=false' "$GDM_CONFIG"
-
-    else
-
-        cat >> "$GDM_CONFIG" <<EOF
-
-[daemon]
-WaylandEnable=false
-EOF
-
-    fi
-
-fi
 
 
 
