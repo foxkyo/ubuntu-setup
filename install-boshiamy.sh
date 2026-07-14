@@ -1,58 +1,97 @@
-#!/usr/bin/env bash
+#!/bin/bash
+
 set -e
 
 echo "======================================"
 echo "安裝嘸蝦米輸入法 (Boshiamy)"
 echo "使用 Fcitx5"
+echo "Ubuntu 26.04"
 echo "======================================"
 
-# 更新套件
-sudo apt update
+if [[ $EUID -ne 0 ]]; then
+    echo "請使用 sudo 執行"
+    echo "sudo ./install-boshiamy.sh"
+    exit 1
+fi
 
-# 安裝 Fcitx5
-sudo apt install -y \
+
+echo
+echo "== 更新套件列表 =="
+
+apt update
+
+
+echo
+echo "== 安裝 Fcitx5 相關套件 =="
+
+apt install -y \
     fcitx5 \
     fcitx5-config-qt \
     fcitx5-frontend-gtk3 \
-    fcitx5-frontend-gtk4 \
-    fcitx5-module-quickphrase-editor \
-    im-config
+    fcitx5-frontend-qt5 \
+    fcitx5-chewing \
+    fcitx-module-quickphrase-editor5 \
+    libime-bin
+
 
 echo
-echo "安裝嘸蝦米詞庫..."
+echo "== 安裝中文字型 =="
 
-# 建立輸入法資料夾
-mkdir -p ~/.local/share/fcitx5/table
-
-cd /tmp
-
-
-# 下載嘸蝦米 Fcitx5 table
-wget -O boshiamy.tar.gz \
-https://github.com/fcitx/fcitx5-table-extra/releases/latest/download/fcitx5-table-extra.tar.gz
+apt install -y \
+    fonts-noto-cjk \
+    fonts-noto-cjk-extra \
+    fonts-arphic-ukai \
+    fonts-arphic-uming
 
 
-tar xf boshiamy.tar.gz
+echo
+echo "== 設定 Fcitx5 環境變數 =="
+
+cat > /etc/profile.d/fcitx5.sh <<'EOF'
+export GTK_IM_MODULE=fcitx
+export QT_IM_MODULE=fcitx
+export XMODIFIERS=@im=fcitx
+EOF
+
+chmod 644 /etc/profile.d/fcitx5.sh
 
 
-# 找 boshiamy table
-find . -name "*boshiamy*" -exec cp {} ~/.local/share/fcitx5/table/ \;
+echo
+echo "== 設定使用者 autostart =="
+
+USER_HOME=$(eval echo ~${SUDO_USER})
+
+mkdir -p "${USER_HOME}/.config/autostart"
 
 
-# 設定 fcitx5
-im-config -n fcitx5
+cat > "${USER_HOME}/.config/autostart/fcitx5.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Fcitx5
+Exec=fcitx5 -d
+Terminal=false
+StartupNotify=false
+EOF
+
+
+chown -R ${SUDO_USER}:${SUDO_USER} "${USER_HOME}/.config"
+
+
+echo
+echo "== 初始化 Fcitx5 =="
+
+sudo -u ${SUDO_USER} fcitx5 -d || true
 
 
 echo
 echo "======================================"
-echo "完成"
+echo "Fcitx5 安裝完成"
 echo
-echo "請登出再登入"
+echo "下一步："
+echo "1. 登出再登入"
+echo "2. 執行：fcitx5-configtool"
+echo "3. 加入嘸蝦米輸入法"
 echo
-echo "啟動設定:"
-echo "  fcitx5-configtool"
-echo
-echo "加入:"
-echo "  嘸蝦米"
-echo
+echo "檢查狀態："
+echo "fcitx5-diagnose"
 echo "======================================"
