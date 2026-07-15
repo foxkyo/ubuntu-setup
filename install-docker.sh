@@ -149,7 +149,7 @@ if [ "$GROUP_ADDED" = true ]; then
     echo "請注意："
     echo "目前 shell 將重新載入 docker 群組"
 
-    exec sudo -u "$CURRENT_USER" sg docker "$SHELL"
+    newgrp docker
 
 fi
 
