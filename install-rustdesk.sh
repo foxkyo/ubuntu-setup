@@ -11,42 +11,58 @@ if command -v rustdesk >/dev/null 2>&1; then
     exit 0
 fi
 
-
 # 安裝必要工具
 sudo apt update
 sudo apt install -y wget curl
 
+echo
+echo "取得最新 RustDesk 下載網址..."
 
-# 取得最新 RustDesk Debian 套件
-echo "下載 RustDesk..."
+DEB_URL=$(
+    curl -fsSL https://api.github.com/repos/rustdesk/rustdesk/releases/latest \
+    | grep '"browser_download_url"' \
+    | grep '\.deb"' \
+    | grep -Ei 'amd64|x86_64' \
+    | cut -d '"' -f4 \
+    | head -n1
+)
+
+if [ -z "$DEB_URL" ]; then
+    echo "❌ 找不到 RustDesk Debian 套件"
+    exit 1
+fi
+
+echo "下載："
+echo "$DEB_URL"
 
 cd /tmp
+rm -f rustdesk.deb
 
-wget -O rustdesk.deb \
-https://github.com/rustdesk/rustdesk/releases/latest/download/rustdesk-x86_64.deb
+wget -O rustdesk.deb "$DEB_URL"
 
-
-# 安裝
+echo
 echo "安裝 RustDesk..."
 
 sudo apt install -y ./rustdesk.deb
 
-
-# 啟用服務
+echo
 echo "啟用 RustDesk Service..."
 
-sudo systemctl enable rustdesk.service || true
-sudo systemctl start rustdesk.service || true
-
+if systemctl list-unit-files | grep -q "^rustdesk.service"; then
+    sudo systemctl enable rustdesk.service
+    sudo systemctl start rustdesk.service
+else
+    echo "未找到 rustdesk.service，略過。"
+fi
 
 echo
 echo "======================================"
 echo "RustDesk 安裝完成"
 echo
-echo "啟動:"
+echo "啟動方式："
 echo "  rustdesk"
 echo
-echo "查看服務:"
+echo "若有 Service："
 echo "  systemctl status rustdesk"
 echo
 echo "======================================"
