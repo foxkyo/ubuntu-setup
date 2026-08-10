@@ -1,161 +1,141 @@
-cat > install-cmsposc-service.sh <<'EOF'
+cat > install-cmspos-autostart.sh <<'EOF'
 #!/usr/bin/env bash
 
 set -e
 
-SERVICE_NAME="cmsposc"
 APP_USER="$(id -un)"
 APP_HOME="$HOME"
-APP_DIR="$APP_HOME/cmsposc"
-SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+TAURI_APP="/usr/bin/app"
+START_SCRIPT="$APP_HOME/.local/bin/start-cmspos"
+AUTOSTART_DIR="$APP_HOME/.config/autostart"
+DESKTOP_FILE="$AUTOSTART_DIR/CMSPOS.desktop"
 
 echo
 echo "======================================"
-echo "   CMSPOSC Laravel Sail 開機服務"
+echo "   CMSPOS Tauri 自動啟動安裝"
 echo "======================================"
 echo
 
 echo "使用者：$APP_USER"
-echo "專案：$APP_DIR"
+echo "Tauri：$TAURI_APP"
 echo
 
 # ==================================================
-# 檢查 Laravel 專案
+# 檢查 Tauri
 # ==================================================
 
-if [ ! -d "$APP_DIR" ]; then
-    echo "❌ 找不到專案：$APP_DIR"
+if [ ! -x "$TAURI_APP" ]; then
+    echo "❌ 找不到 Tauri 執行檔："
+    echo "   $TAURI_APP"
     exit 1
 fi
 
-if [ ! -x "$APP_DIR/vendor/bin/sail" ]; then
-    echo "❌ 找不到 Laravel Sail："
-    echo "   $APP_DIR/vendor/bin/sail"
+echo "✓ Tauri 執行檔"
+
+# ==================================================
+# 檢查 CMSPOS Sail service
+# ==================================================
+
+if ! systemctl list-unit-files cmsposc.service >/dev/null 2>&1; then
+    echo "❌ 找不到 cmsposc.service"
+    echo
+    echo "請先完成 Laravel Sail 開機服務設定。"
     exit 1
 fi
 
-echo "✓ Laravel Sail"
+echo "✓ cmsposc.service"
 
 # ==================================================
-# 檢查 Docker
+# 建立啟動腳本
 # ==================================================
 
-if ! command -v docker >/dev/null 2>&1; then
-    echo "❌ 找不到 Docker"
-    exit 1
-fi
-
-echo "✓ Docker"
 echo
+echo "🔧 建立 CMSPOS 啟動腳本..."
+
+mkdir -p "$APP_HOME/.local/bin"
+
+cat > "$START_SCRIPT" <<SCRIPT_EOF
+#!/usr/bin/env bash
+
+# 等待 Laravel Sail 啟動完成
+while ! systemctl is-active --quiet cmsposc.service; do
+    sleep 1
+done
+
+# 再稍微等待服務穩定
+sleep 2
+
+# 啟動 Tauri CMSPOS
+exec /usr/bin/app
+SCRIPT_EOF
+
+chmod +x "$START_SCRIPT"
+
+echo "✓ $START_SCRIPT"
 
 # ==================================================
-# 建立 systemd service
+# 建立 autostart
 # ==================================================
 
-echo "🔧 建立 systemd service..."
-
-sudo tee "$SERVICE_FILE" > /dev/null <<SERVICE_EOF
-[Unit]
-Description=CMSPOSC Laravel Sail
-Requires=docker.service
-After=docker.service network-online.target
-Wants=network-online.target
-
-[Service]
-Type=oneshot
-
-User=$APP_USER
-Group=$(id -gn)
-
-WorkingDirectory=$APP_DIR
-Environment=HOME=$APP_HOME
-
-ExecStart=/bin/bash -lc 'cd "$APP_DIR" && ./vendor/bin/sail up -d && ./vendor/bin/sail npm run build'
-
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-SERVICE_EOF
-
-echo "✓ Service 建立完成"
 echo
+echo "🔧 建立 Ubuntu 自動啟動設定..."
+
+mkdir -p "$AUTOSTART_DIR"
+
+cat > "$DESKTOP_FILE" <<DESKTOP_EOF
+[Desktop Entry]
+Type=Application
+Name=CMSPOS
+Comment=CMSPOS Tauri POS
+Exec=$START_SCRIPT
+Terminal=false
+StartupNotify=false
+X-GNOME-Autostart-enabled=true
+DESKTOP_EOF
+
+echo "✓ $DESKTOP_FILE"
 
 # ==================================================
-# systemd reload
+# 完成
 # ==================================================
-
-echo "🔄 重新載入 systemd..."
-
-sudo systemctl daemon-reload
-
-# ==================================================
-# 啟用開機自動啟動
-# ==================================================
-
-echo "🚀 設定開機自動啟動..."
-
-sudo systemctl enable "$SERVICE_NAME.service"
-
-echo "✓ 已設定開機自動啟動"
-echo
-
-# ==================================================
-# 啟動測試
-# ==================================================
-
-echo "======================================"
-echo "   啟動 CMSPOSC"
-echo "======================================"
-echo
-
-if sudo systemctl start "$SERVICE_NAME.service"; then
-
-    echo
-    echo "======================================"
-    echo "   ✅ CMSPOSC 啟動成功"
-    echo "======================================"
-    echo
-
-else
-
-    echo
-    echo "======================================"
-    echo "   ❌ CMSPOSC 啟動失敗"
-    echo "======================================"
-    echo
-
-    echo "查看錯誤："
-    echo
-    echo "  journalctl -u $SERVICE_NAME -n 100 --no-pager"
-    echo
-
-    exit 1
-fi
-
-# ==================================================
-# 顯示狀態
-# ==================================================
-
-echo "Service 狀態："
-echo
-
-systemctl status "$SERVICE_NAME.service" --no-pager
 
 echo
 echo "======================================"
-echo "   安裝完成"
+echo "   ✅ CMSPOS 自動啟動設定完成"
 echo "======================================"
 echo
 
-echo "開機時會自動執行："
+echo "開機流程："
 echo
-echo "  cd ~/cmsposc"
-echo "  ./vendor/bin/sail up -d"
-echo "  ./vendor/bin/sail npm run build"
+echo "  Ubuntu 開機"
+echo "      ↓"
+echo "  Docker"
+echo "      ↓"
+echo "  cmsposc.service"
+echo "      ↓"
+echo "  Sail up -d"
+echo "      ↓"
+echo "  Sail npm run build"
+echo "      ↓"
+echo "  Ubuntu 登入桌面"
+echo "      ↓"
+echo "  等待 cmsposc.service"
+echo "      ↓"
+echo "  /usr/bin/app"
+echo "      ↓"
+echo "  CMSPOS"
 echo
 
-echo "查看 Log："
-echo "  journalctl -u $SERVICE_NAME -n 100 --no-pager"
+echo "目前設定："
+echo
+echo "  Tauri：$TAURI_APP"
+echo "  啟動腳本：$START_SCRIPT"
+echo "  Autostart：$DESKTOP_FILE"
+echo
+
+echo "請重新登入 Ubuntu 或重新開機測試。"
 echo
 EOF
+
+chmod +x install-cmspos-autostart.sh
+./install-cmspos-autostart.sh
