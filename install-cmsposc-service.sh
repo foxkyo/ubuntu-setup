@@ -20,7 +20,7 @@ echo "專案：$APP_DIR"
 echo
 
 # ==================================================
-# 檢查 Laravel Sail
+# 檢查 Laravel 專案
 # ==================================================
 
 if [ ! -d "$APP_DIR" ]; then
@@ -37,27 +37,7 @@ fi
 echo "✓ Laravel Sail"
 
 # ==================================================
-# Node / npm
-# ==================================================
-
-NODE_PATH="$(command -v node || true)"
-NPM_PATH="$(command -v npm || true)"
-
-if [ -z "$NODE_PATH" ]; then
-    echo "❌ 找不到 Node.js"
-    exit 1
-fi
-
-if [ -z "$NPM_PATH" ]; then
-    echo "❌ 找不到 npm"
-    exit 1
-fi
-
-echo "Node：$NODE_PATH"
-echo "npm ：$NPM_PATH"
-
-# ==================================================
-# Docker
+# 檢查 Docker
 # ==================================================
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -65,7 +45,6 @@ if ! command -v docker >/dev/null 2>&1; then
     exit 1
 fi
 
-echo
 echo "✓ Docker"
 echo
 
@@ -89,10 +68,9 @@ User=$APP_USER
 Group=$(id -gn)
 
 WorkingDirectory=$APP_DIR
-
 Environment=HOME=$APP_HOME
 
-ExecStart=/bin/bash -lc 'cd $APP_DIR && $APP_DIR/vendor/bin/sail up -d && $NPM_PATH run build'
+ExecStart=/bin/bash -lc 'cd "$APP_DIR" && ./vendor/bin/sail up -d && ./vendor/bin/sail npm run build'
 
 RemainAfterExit=yes
 
@@ -100,7 +78,7 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 SERVICE_EOF
 
-echo "✓ Service 建立完成：$SERVICE_FILE"
+echo "✓ Service 建立完成"
 echo
 
 # ==================================================
@@ -110,9 +88,6 @@ echo
 echo "🔄 重新載入 systemd..."
 
 sudo systemctl daemon-reload
-
-echo "✓ systemd reload 完成"
-echo
 
 # ==================================================
 # 啟用開機自動啟動
@@ -173,11 +148,14 @@ echo "   安裝完成"
 echo "======================================"
 echo
 
-echo "查看 Log："
-echo "  journalctl -u $SERVICE_NAME -n 100 --no-pager"
+echo "開機時會自動執行："
+echo
+echo "  cd ~/cmsposc"
+echo "  ./vendor/bin/sail up -d"
+echo "  ./vendor/bin/sail npm run build"
 echo
 
-echo "即時 Log："
-echo "  journalctl -u $SERVICE_NAME -f"
+echo "查看 Log："
+echo "  journalctl -u $SERVICE_NAME -n 100 --no-pager"
 echo
 EOF
