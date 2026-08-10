@@ -4,9 +4,10 @@ cat > install-cmsposc-service.sh <<'EOF'
 set -e
 
 SERVICE_NAME="cmsposc"
-APP_DIR="$HOME/cmsposc"
-SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 APP_USER="$(id -un)"
+APP_HOME="$HOME"
+APP_DIR="$APP_HOME/cmsposc"
+SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
 echo
 echo "======================================"
@@ -18,9 +19,9 @@ echo "使用者：$APP_USER"
 echo "專案：$APP_DIR"
 echo
 
-# --------------------------------------------------
-# 檢查專案
-# --------------------------------------------------
+# ==================================================
+# 檢查 Laravel Sail
+# ==================================================
 
 if [ ! -d "$APP_DIR" ]; then
     echo "❌ 找不到專案：$APP_DIR"
@@ -28,31 +29,19 @@ if [ ! -d "$APP_DIR" ]; then
 fi
 
 if [ ! -x "$APP_DIR/vendor/bin/sail" ]; then
-    echo "❌ 找不到 Sail：$APP_DIR/vendor/bin/sail"
+    echo "❌ 找不到 Laravel Sail："
+    echo "   $APP_DIR/vendor/bin/sail"
     exit 1
 fi
 
 echo "✓ Laravel Sail"
-echo
 
-# --------------------------------------------------
-# 找 Node / npm
-# --------------------------------------------------
+# ==================================================
+# Node / npm
+# ==================================================
 
 NODE_PATH="$(command -v node || true)"
 NPM_PATH="$(command -v npm || true)"
-
-# NVM
-NVM_INIT=""
-
-if [ -f "$HOME/.nvm/nvm.sh" ]; then
-    NVM_INIT="source '$HOME/.nvm/nvm.sh'; "
-
-    NODE_PATH="$(bash -lc "source '$HOME/.nvm/nvm.sh' && command -v node")"
-    NPM_PATH="$(bash -lc "source '$HOME/.nvm/nvm.sh' && command -v npm")"
-
-    echo "✓ NVM"
-fi
 
 if [ -z "$NODE_PATH" ]; then
     echo "❌ 找不到 Node.js"
@@ -66,27 +55,27 @@ fi
 
 echo "Node：$NODE_PATH"
 echo "npm ：$NPM_PATH"
-echo
 
-# --------------------------------------------------
+# ==================================================
 # Docker
-# --------------------------------------------------
+# ==================================================
 
 if ! command -v docker >/dev/null 2>&1; then
     echo "❌ 找不到 Docker"
     exit 1
 fi
 
+echo
 echo "✓ Docker"
 echo
 
-# --------------------------------------------------
+# ==================================================
 # 建立 systemd service
-# --------------------------------------------------
+# ==================================================
 
 echo "🔧 建立 systemd service..."
 
-sudo tee "$SERVICE_FILE" > /dev/null <<EOF
+sudo tee "$SERVICE_FILE" > /dev/null <<SERVICE_EOF
 [Unit]
 Description=CMSPOSC Laravel Sail
 Requires=docker.service
@@ -101,37 +90,44 @@ Group=$(id -gn)
 
 WorkingDirectory=$APP_DIR
 
-Environment=HOME=$HOME
+Environment=HOME=$APP_HOME
 
-ExecStart=/bin/bash -lc "${NVM_INIT}cd '$APP_DIR' && ./vendor/bin/sail up -d && npm run build"
+ExecStart=/bin/bash -lc 'cd $APP_DIR && $APP_DIR/vendor/bin/sail up -d && $NPM_PATH run build'
 
 RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
-EOF
+SERVICE_EOF
 
-echo "✓ Service 建立完成"
+echo "✓ Service 建立完成：$SERVICE_FILE"
 echo
 
-# --------------------------------------------------
+# ==================================================
 # systemd reload
-# --------------------------------------------------
+# ==================================================
+
+echo "🔄 重新載入 systemd..."
 
 sudo systemctl daemon-reload
 
-# --------------------------------------------------
-# 開機自動啟動
-# --------------------------------------------------
+echo "✓ systemd reload 完成"
+echo
+
+# ==================================================
+# 啟用開機自動啟動
+# ==================================================
+
+echo "🚀 設定開機自動啟動..."
 
 sudo systemctl enable "$SERVICE_NAME.service"
 
 echo "✓ 已設定開機自動啟動"
 echo
 
-# --------------------------------------------------
-# 立即啟動
-# --------------------------------------------------
+# ==================================================
+# 啟動測試
+# ==================================================
 
 echo "======================================"
 echo "   啟動 CMSPOSC"
@@ -154,11 +150,7 @@ else
     echo "======================================"
     echo
 
-    echo "執行："
-    echo
-    echo "  systemctl status $SERVICE_NAME"
-    echo
-    echo "或："
+    echo "查看錯誤："
     echo
     echo "  journalctl -u $SERVICE_NAME -n 100 --no-pager"
     echo
@@ -166,9 +158,12 @@ else
     exit 1
 fi
 
-# --------------------------------------------------
+# ==================================================
 # 顯示狀態
-# --------------------------------------------------
+# ==================================================
+
+echo "Service 狀態："
+echo
 
 systemctl status "$SERVICE_NAME.service" --no-pager
 
@@ -177,3 +172,12 @@ echo "======================================"
 echo "   安裝完成"
 echo "======================================"
 echo
+
+echo "查看 Log："
+echo "  journalctl -u $SERVICE_NAME -n 100 --no-pager"
+echo
+
+echo "即時 Log："
+echo "  journalctl -u $SERVICE_NAME -f"
+echo
+EOF
